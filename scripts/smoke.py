@@ -43,6 +43,8 @@ def main():
         result = read("/api/ask", "报修单需要提供哪些信息？", STAFF, strategy)
         assert "EQ-01" in {row["id"] for row in result["citations"]}, result
         assert result["retrieval_ms"] >= 0
+        if strategy == "hybrid":
+            assert result["citations"][0]["id"] == "EQ-01", result
 
     unrelated = read("/api/ask", "今天上海会下雨吗？", STAFF)
     assert unrelated["outcome"] == "abstain" and not unrelated["citations"], unrelated
