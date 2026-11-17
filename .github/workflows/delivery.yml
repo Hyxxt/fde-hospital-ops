@@ -33,7 +33,7 @@ jobs:
         run: |
           docker compose up -d --wait --no-build
           python3 scripts/smoke.py | tee compose-smoke.json
-          docker compose exec -T app python -c 'import socket; print(socket.create_connection(("db", 5432), 3).getpeername()); assert socket.socket().connect_ex(("1.1.1.1", 443)) != 0'
+          docker compose exec -T app python -c 'import socket; print(socket.create_connection(("db", 5432), 3).getpeername()); s=socket.socket(); s.settimeout(3); assert s.connect_ex(("1.1.1.1", 443)) != 0'
           docker compose restart app
           curl --retry 30 --retry-all-errors --retry-delay 2 -fsS http://127.0.0.1:8080/readyz
           docker compose down

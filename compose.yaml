@@ -29,8 +29,6 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    ports:
-      - "127.0.0.1:${APP_PORT:-8080}:8080"
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/readyz', timeout=2)"]
       interval: 5s
@@ -38,6 +36,17 @@ services:
       retries: 20
     restart: unless-stopped
     networks: [private]
+  gateway:
+    image: nginx:1.28-alpine
+    volumes:
+      - ./deploy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    ports:
+      - "127.0.0.1:${APP_PORT:-8080}:8080"
+    depends_on:
+      app:
+        condition: service_healthy
+    restart: unless-stopped
+    networks: [edge, private]
   vllm:
     profiles: [gpu]
     image: vllm/vllm-openai:v0.18.0
@@ -58,8 +67,9 @@ services:
       - ./deploy/prometheus.yml:/etc/prometheus/prometheus.yml:ro
     ports:
       - "127.0.0.1:9090:9090"
-    networks: [private]
+    networks: [edge, private]
 networks:
+  edge:
   private:
     internal: true
 volumes:
