@@ -1,0 +1,45 @@
+name: vLLM CPU inference
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/inference.yml', 'scripts/bench_vllm.py']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  qwen-inference:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      VLLM_IMAGE: vllm/vllm-openai-cpu:v0.31.0-x86_64
+    steps:
+      - uses: actions/checkout@v4
+      - name: Start Qwen under vLLM
+        run: |
+          lscpu | head -24
+          docker run -d --name qwen --shm-size=2g -p 127.0.0.1:8000:8000 \
+            -e VLLM_CPU_KVCACHE_SPACE=1 -e VLLM_CPU_OMP_THREADS_BIND=auto \
+            "$VLLM_IMAGE" --model Qwen/Qwen3-0.6B --served-model-name qwen-hospital \
+            --max-model-len 1024 --max-num-seqs 4 --max-num-batched-tokens 1024 \
+            --dtype float32 --enforce-eager --no-enable-prefix-caching
+          curl --retry 72 --retry-all-errors --retry-delay 5 -fsS http://127.0.0.1:8000/v1/models
+      - name: Measure stream latency and throughput
+        run: |
+          python3 scripts/bench_vllm.py | tee vllm-benchmark.json
+          echo '### Qwen3-0.6B / Linux CPU / FP32' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Run with 8 fixed prompts per concurrency, prefix caching disabled.' >> "$GITHUB_STEP_SUMMARY"
+          echo >> "$GITHUB_STEP_SUMMARY"
+          sed 's/^/    /' vllm-benchmark.json >> "$GITHUB_STEP_SUMMARY"
+      - name: Collect diagnostics
+        if: always()
+        run: docker logs qwen
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vllm-benchmark
+          path: vllm-benchmark.json
