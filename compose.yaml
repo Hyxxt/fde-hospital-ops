@@ -1,0 +1,66 @@
+name: hospital-ops
+services:
+  db:
+    image: pgvector/pgvector:0.8.1-pg16-bookworm
+    environment:
+      POSTGRES_USER: hospital
+      POSTGRES_DB: hospital
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hospital -d hospital"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+    networks: [private]
+  app:
+    image: ${APP_IMAGE:-hospital-ops:local}
+    build: .
+    user: "999:999"
+    environment:
+      DATABASE_URL: "host=db dbname=hospital user=hospital"
+      PGPASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      STAFF_TOKEN: ${STAFF_TOKEN:?set STAFF_TOKEN in .env}
+      OPS_TOKEN: ${OPS_TOKEN:?set OPS_TOKEN in .env}
+      LLM_URL: ${LLM_URL:-}
+      LLM_MODEL: qwen-hospital
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${APP_PORT:-8080}:8080"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/readyz', timeout=2)"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+    networks: [private]
+  vllm:
+    profiles: [gpu]
+    image: vllm/vllm-openai:v0.18.0
+    command: ["--model", "/weights", "--served-model-name", "qwen-hospital", "--max-model-len", "2048", "--gpu-memory-utilization", "0.65", "--enforce-eager"]
+    environment:
+      HF_HUB_OFFLINE: "1"
+      TRANSFORMERS_OFFLINE: "1"
+    volumes:
+      - "${QWEN_WEIGHTS_DIR:-./models/qwen}:/weights:ro"
+    shm_size: "1gb"
+    gpus: all
+    networks: [private]
+  prometheus:
+    profiles: [monitoring]
+    image: prom/prometheus:v3.5.0
+    command: ["--config.file=/etc/prometheus/prometheus.yml"]
+    volumes:
+      - ./deploy/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "127.0.0.1:9090:9090"
+    networks: [private]
+networks:
+  private:
+    internal: true
+volumes:
+  db-data:

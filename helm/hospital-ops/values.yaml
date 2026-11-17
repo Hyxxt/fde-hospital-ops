@@ -1,0 +1,14 @@
+image: hospital-ops:local
+imagePullPolicy: IfNotPresent
+postgresImage: pgvector/pgvector:0.8.1-pg16-bookworm
+existingSecret: hospital-ops-secrets
+storageClassName: ""
+storageSize: 1Gi
+llmUrl: ""
+appResources:
+  requests:
+    cpu: 150m
+    memory: 192Mi
+  limits:
+    cpu: "2"
+    memory: 512Mi

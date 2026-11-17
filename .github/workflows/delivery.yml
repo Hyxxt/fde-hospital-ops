@@ -1,0 +1,67 @@
+name: Delivery acceptance
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  container-and-cluster:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      POSTGRES_PASSWORD: ephemeral-ci-db-42
+      STAFF_TOKEN: ephemeral-ci-staff-42
+      OPS_TOKEN: ephemeral-ci-operations-42
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Docker image
+        run: docker build -t hospital-ops:local .
+      - name: Check memory-limited public profile
+        run: |
+          docker run -d --name public-demo -m 512m -e PUBLIC_DEMO=1 -p 127.0.0.1:8080:8080 hospital-ops:local
+          curl --retry 30 --retry-all-errors --retry-delay 2 -fsS http://127.0.0.1:8080/readyz
+          python3 scripts/smoke.py | tee public-smoke.json
+          docker rm -f public-demo
+      - name: Check isolated Docker Compose
+        run: |
+          docker compose up -d --wait --no-build
+          python3 scripts/smoke.py | tee compose-smoke.json
+          docker compose exec -T app python -c 'import socket; print(socket.create_connection(("db", 5432), 3).getpeername()); assert socket.socket().connect_ex(("1.1.1.1", 443)) != 0'
+          docker compose restart app
+          curl --retry 30 --retry-all-errors --retry-delay 2 -fsS http://127.0.0.1:8080/readyz
+          docker compose down
+      - name: Deploy Helm to k3d
+        run: |
+          curl -fSL https://github.com/k3d-io/k3d/releases/download/v5.8.3/k3d-linux-amd64 -o /tmp/k3d
+          chmod +x /tmp/k3d
+          /tmp/k3d cluster create hospital --agents 0
+          /tmp/k3d image import hospital-ops:local -c hospital
+          kubectl create namespace hospital
+          kubectl -n hospital create secret generic hospital-ops-secrets \
+            --from-literal=POSTGRES_PASSWORD="$POSTGRES_PASSWORD" \
+            --from-literal=STAFF_TOKEN="$STAFF_TOKEN" --from-literal=OPS_TOKEN="$OPS_TOKEN"
+          helm lint helm/hospital-ops
+          helm upgrade --install hospital helm/hospital-ops -n hospital --wait --timeout 4m
+          kubectl -n hospital port-forward svc/hospital 8080:8080 >/tmp/hospital-port-forward.log 2>&1 &
+          curl --retry 30 --retry-all-errors --retry-delay 2 -fsS http://127.0.0.1:8080/readyz
+          python3 scripts/smoke.py | tee k8s-smoke.json
+          kubectl -n hospital exec deploy/hospital -- python -c 'import socket; s=socket.socket(); s.settimeout(3); assert s.connect_ex(("1.1.1.1",443)) != 0'
+          kubectl -n hospital rollout restart deployment hospital
+          kubectl -n hospital rollout status deployment hospital --timeout=120s
+          kubectl -n hospital get pods,pvc,networkpolicy
+      - name: Collect diagnostics
+        if: failure()
+        run: |
+          docker ps -a
+          docker logs public-demo || true
+          docker compose logs || true
+          kubectl get pods -A || true
+          kubectl -n hospital describe pods || true
+          kubectl -n hospital logs deploy/hospital || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: delivery-evidence
+          path: '*-smoke.json'

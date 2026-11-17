@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="检索医院后勤制度，核对原文条款并查看检索评测。">
+    <title>医院后勤制度助手</title>
+    <link rel="stylesheet" href="/styles.css">
+    <script src="/app.js" defer></script>
+  </head>
+  <body>
+    <header class="masthead">
+      <div class="frame header-inner">
+        <a class="brand" href="/" aria-label="医院后勤制度助手首页">
+          <span class="brand-mark" aria-hidden="true">+</span>
+          <span>后勤制度助手</span>
+        </a>
+        <a class="header-link" href="https://github.com/Hyxxt/fde-hospital-ops">项目源码 ↗</a>
+      </div>
+    </header>
+    <main class="frame">
+      <section class="intro">
+        <p class="eyebrow">医院后勤 · 制度检索</p>
+        <h1>查制度，找到原文依据。</h1>
+        <p>查询设备报修、物资采购、库房管理和设施巡检流程。回答附条款来源，方便核对。</p>
+      </section>
+      <div class="workspace">
+        <section class="panel conversation" aria-labelledby="question-title">
+          <div class="panel-heading">
+            <h2 id="question-title">提出问题</h2>
+            <span class="environment" id="environment">正在检查服务</span>
+          </div>
+          <form id="ask-form">
+            <div id="credentials" hidden>
+              <label for="token">内网访问令牌</label>
+              <input id="token" type="password" autocomplete="off">
+            </div>
+            <label class="visually-hidden" for="question">后勤制度问题</label>
+            <textarea id="question" rows="3" maxlength="300" placeholder="例如：送过来的货少了几件，我应该怎么处理？" required></textarea>
+            <div class="form-footer">
+              <label class="strategy">检索方式
+                <select id="strategy">
+                  <option value="hybrid">混合检索</option>
+                  <option value="vector">语义检索</option>
+                  <option value="bm25">关键词检索</option>
+                </select>
+              </label>
+              <button class="primary" id="submit" type="submit">查询制度 <span aria-hidden="true">↗</span></button>
+            </div>
+          </form>
+          <div class="answer" id="answer" aria-live="polite" hidden>
+            <div class="panel-heading">
+              <h2 id="answer-title"></h2>
+              <span id="timing"></span>
+            </div>
+            <p id="answer-text"></p>
+          </div>
+        </section>
+        <aside class="panel sidebar" aria-labelledby="sidebar-title">
+          <h2 id="sidebar-title">试着这样问</h2>
+          <div id="examples">
+            <button type="button"><span>设备报修</span>多个科室停摆，后勤多久必须联系？</button>
+            <button type="button"><span>物资采购</span>预算六千元，采购要找几家比价？</button>
+            <button type="button"><span>库房管理</span>仓库实际数和账本对不上怎么办？</button>
+            <button type="button"><span>超出范围</span>今天上海会下雨吗？</button>
+          </div>
+          <h2 id="citation-title" hidden>相关条款</h2>
+          <div id="citations"></div>
+        </aside>
+      </div>
+      <section class="panel evaluation" aria-labelledby="eval-title">
+        <div class="panel-heading">
+          <div>
+            <h2 id="eval-title">检索评测</h2>
+            <p>对比三种检索方式的前三条命中数，检查范围外问题是否被拒答。</p>
+          </div>
+          <button class="secondary" id="eval-button" type="button">运行 16 道评测题</button>
+        </div>
+        <div id="eval-result" aria-live="polite"></div>
+      </section>
+      <footer>演示制度为虚构样本。适用于后勤管理流程演示。</footer>
+    </main>
+  </body>
+</html>

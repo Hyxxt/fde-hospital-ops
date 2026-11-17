@@ -1,0 +1,57 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ .Release.Name }}-db
+spec:
+  podSelector:
+    matchLabels:
+      hospital-component: {{ .Release.Name }}-db
+  policyTypes: ["Ingress", "Egress"]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              hospital-component: {{ .Release.Name }}-app
+      ports:
+        - protocol: TCP
+          port: 5432
+  egress: []
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ .Release.Name }}-app
+spec:
+  podSelector:
+    matchLabels:
+      hospital-component: {{ .Release.Name }}-app
+  policyTypes: ["Egress"]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+    - to:
+        - podSelector:
+            matchLabels:
+              hospital-component: {{ .Release.Name }}-db
+      ports:
+        - protocol: TCP
+          port: 5432
+    {{- if .Values.llmUrl }}
+    - to:
+        - podSelector:
+            matchLabels:
+              hospital-component: {{ .Release.Name }}-vllm
+      ports:
+        - protocol: TCP
+          port: 8000
+    {{- end }}
