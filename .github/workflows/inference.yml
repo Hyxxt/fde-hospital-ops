@@ -44,17 +44,18 @@ jobs:
           export LLM_URL=http://qwen:8000/v1
           docker compose up -d --build --wait
           docker network connect --alias qwen hospital-ops_private qwen
+          docker compose exec -T app python -c 'import os, urllib.request; print(urllib.request.urlopen(os.environ["LLM_URL"] + "/models", timeout=5).status)'
           python3 - <<'PY'
           from scripts.smoke import read, STAFF
-          result = read('/api/ask', '报修单需要提供哪些信息？', STAFF)
+          result = read('/api/ask', '设备故障登记时需要填资产编号和哪些信息？', STAFF)
           assert result['outcome'] == 'generated', result
           assert 'EQ-01' in {row['id'] for row in result['citations']}, result
           print('Retrieved EQ-01 and generated a cited answer with Qwen.')
           PY
-          docker stop qwen
+          docker network disconnect hospital-ops_private qwen
           python3 - <<'PY'
           from scripts.smoke import read, STAFF
-          result = read('/api/ask', '报修单需要提供哪些信息？', STAFF)
+          result = read('/api/ask', '设备故障登记时需要填资产编号和哪些信息？', STAFF)
           assert result['outcome'] == 'evidence', result
           assert 'EQ-01' in {row['id'] for row in result['citations']}, result
           print('Returned source text after the inference service stopped.')
