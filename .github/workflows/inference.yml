@@ -18,6 +18,9 @@ jobs:
     timeout-minutes: 25
     env:
       VLLM_IMAGE: vllm/vllm-openai-cpu:v0.31.0-x86_64
+      POSTGRES_PASSWORD: ephemeral-ci-db-42
+      STAFF_TOKEN: ephemeral-ci-staff-42
+      OPS_TOKEN: ephemeral-ci-operations-42
     steps:
       - uses: actions/checkout@v4
       - name: Start Qwen under vLLM
@@ -36,9 +39,31 @@ jobs:
           echo 'Run with 8 fixed prompts per concurrency, prefix caching disabled.' >> "$GITHUB_STEP_SUMMARY"
           echo >> "$GITHUB_STEP_SUMMARY"
           sed 's/^/    /' vllm-benchmark.json >> "$GITHUB_STEP_SUMMARY"
+      - name: Check inference integration and evidence fallback
+        run: |
+          export LLM_URL=http://qwen:8000/v1
+          docker compose up -d --build --wait
+          docker network connect --alias qwen hospital-ops_private qwen
+          python3 - <<'PY'
+          from scripts.smoke import read, STAFF
+          result = read('/api/ask', '报修单需要提供哪些信息？', STAFF)
+          assert result['outcome'] == 'generated', result
+          assert 'EQ-01' in {row['id'] for row in result['citations']}, result
+          print('Retrieved EQ-01 and generated a cited answer with Qwen.')
+          PY
+          docker stop qwen
+          python3 - <<'PY'
+          from scripts.smoke import read, STAFF
+          result = read('/api/ask', '报修单需要提供哪些信息？', STAFF)
+          assert result['outcome'] == 'evidence', result
+          assert 'EQ-01' in {row['id'] for row in result['citations']}, result
+          print('Returned source text after the inference service stopped.')
+          PY
       - name: Collect diagnostics
         if: always()
-        run: docker logs qwen
+        run: |
+          docker logs qwen || true
+          docker compose logs app || true
       - uses: actions/upload-artifact@v4
         with:
           name: vllm-benchmark

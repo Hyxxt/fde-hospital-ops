@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Qwen3 与 vLLM 的 CPU 流式推理压测，比较首字延迟和吞吐。">
+    <title>vLLM 推理压测</title>
+    <link rel="stylesheet" href="/styles.css">
+    <script src="/benchmark.js" defer></script>
+  </head>
+  <body>
+    <header class="masthead">
+      <div class="frame header-inner">
+        <a class="brand" href="/benchmark.html">vLLM 推理压测</a>
+        <a class="header-link" href="/">返回制度助手 ↗</a>
+      </div>
+    </header>
+    <main class="frame">
+      <section class="intro">
+        <p class="eyebrow">Qwen3-0.6B · Linux CPU</p>
+        <h1>并发如何影响推理速度？</h1>
+        <p>对同一组中文提示分别以并发 1 和 4 运行，记录首个可见 token 的延迟、完整回答耗时和总输出吞吐。</p>
+      </section>
+      <section class="panel" aria-labelledby="results">
+        <div class="panel-heading">
+          <h2 id="results">实测结果</h2>
+          <a id="download" href="/vllm-benchmark.json" download hidden>下载 JSON</a>
+        </div>
+        <p id="benchmark-status" aria-live="polite">正在读取验收结果…</p>
+        <div id="benchmark-metrics" class="benchmark-metrics"></div>
+      </section>
+      <section class="panel evaluation" aria-labelledby="procedure">
+        <h2 id="procedure">实验条件</h2>
+        <p id="benchmark-environment"></p>
+        <p>每档运行 8 条固定提示，预热请求单独执行。P95 采用最近秩法，本样本量下等于最大观测值。吞吐按该档生成 token 数除以整批墙钟时间计算。</p>
+        <p><a id="benchmark-run" hidden>查看 GitHub Actions 原始运行记录 ↗</a></p>
+      </section>
+      <footer><a href="https://github.com/Hyxxt/fde-hospital-ops/blob/main/scripts/bench_vllm.py">压测脚本 ↗</a></footer>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,24 @@
+{
+  "model": "qwen-hospital",
+  "date": "2026-11-17",
+  "environment": "Ubuntu 24.04 · 4 vCPU Intel Xeon 6975P-C · vLLM 0.31.0 · FP32 · 上下文 1024 · 关闭前缀缓存",
+  "run_url": "https://github.com/Hyxxt/fde-hospital-ops/actions/runs/44054392588",
+  "runs": [
+    {
+      "concurrency": 1,
+      "requests": 8,
+      "p95_ttft_ms": 294.8,
+      "p95_e2e_ms": 11240.3,
+      "output_tokens": 422,
+      "output_tokens_per_second": 5.77
+    },
+    {
+      "concurrency": 4,
+      "requests": 8,
+      "p95_ttft_ms": 798.3,
+      "p95_e2e_ms": 12592.8,
+      "output_tokens": 422,
+      "output_tokens_per_second": 17.22
+    }
+  ]
+}
