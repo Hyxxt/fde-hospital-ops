@@ -2,7 +2,7 @@ name: vLLM CPU inference
 on:
   push:
     branches: [main]
-    paths: ['.github/workflows/inference.yml', 'scripts/bench_vllm.py']
+    paths: ['.github/workflows/inference.yml', 'app/main.py', 'scripts/bench_vllm.py']
   workflow_dispatch:
 
 permissions:
@@ -32,13 +32,6 @@ jobs:
             --max-model-len 1024 --max-num-seqs 4 --max-num-batched-tokens 1024 \
             --dtype float32 --enforce-eager --no-enable-prefix-caching
           curl --retry 72 --retry-all-errors --retry-delay 5 -fsS http://127.0.0.1:8000/v1/models
-      - name: Measure stream latency and throughput
-        run: |
-          python3 scripts/bench_vllm.py | tee vllm-benchmark.json
-          echo '### Qwen3-0.6B / Linux CPU / FP32' >> "$GITHUB_STEP_SUMMARY"
-          echo 'Run with 8 fixed prompts per concurrency, prefix caching disabled.' >> "$GITHUB_STEP_SUMMARY"
-          echo >> "$GITHUB_STEP_SUMMARY"
-          sed 's/^/    /' vllm-benchmark.json >> "$GITHUB_STEP_SUMMARY"
       - name: Check inference integration and evidence fallback
         run: |
           export LLM_URL=http://qwen:8000/v1
@@ -60,6 +53,13 @@ jobs:
           assert 'EQ-01' in {row['id'] for row in result['citations']}, result
           print('Returned source text after the inference service stopped.')
           PY
+      - name: Measure stream latency and throughput
+        run: |
+          python3 scripts/bench_vllm.py | tee vllm-benchmark.json
+          echo '### Qwen3-0.6B / Linux CPU / FP32' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Run with 8 fixed prompts per concurrency, prefix caching disabled.' >> "$GITHUB_STEP_SUMMARY"
+          echo >> "$GITHUB_STEP_SUMMARY"
+          sed 's/^/    /' vllm-benchmark.json >> "$GITHUB_STEP_SUMMARY"
       - name: Collect diagnostics
         if: always()
         run: |

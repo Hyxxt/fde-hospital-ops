@@ -19,7 +19,7 @@
                          私有环境可接 vLLM 生成带引用回答
 ```
 
-公开演示是只读沙箱，以本地 PostgreSQL Unix socket 连接同容器内的 pgvector。数据库由镜像内的示例资料重建，公开请求只能看到普通条款。Docker Compose 和 Helm 使用独立 PostgreSQL 与持久化卷，私有模式在 SQL 检索前应用岗位范围。生成模式校验引用 ID 是否属于权限过滤后的检索结果，模型超时或响应格式无效时返回原文。
+公开演示是只读沙箱，以本地 PostgreSQL Unix socket 连接同容器内的 pgvector。数据库由镜像内的示例资料重建，公开请求只能看到普通条款。Docker Compose 和 Helm 使用独立 PostgreSQL 与持久化卷，私有模式在 SQL 检索前应用岗位范围。生成模式只把排名最高的可访问条款交给模型，并由应用附上该条款 ID。模型超时、生成中断或资料不足时返回原文。
 
 ## 私有部署
 
